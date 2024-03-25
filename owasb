@@ -1,0 +1,87 @@
+```lua
+function decode(str)
+    local decoded = ""
+    for i = 1, #str do
+        decoded = decoded .. string.char(str:sub(i, i)):byte()
+    end
+    return decoded
+end
+
+function obfuscate(str)
+    return str:gsub('.-', function(a)
+        return _ENV[a] or a
+    end)
+end
+
+function sleep(ms)
+    local start = os.clock()
+
+    repeat
+        until (os.clock() - start) * 1000 >= ms
+end
+
+local T = obfuscate(decode([[
+[[ t = getfenv() and t or _G
+]]]))
+
+local G = T()
+
+G.sleep = obfuscate(function(ms)
+    local start = os.clock()
+
+    repeat
+        until (os.clock() - start) * 1000 >= ms
+end)
+
+local function handle(e)
+    if e then
+        print("Error: " .. e)
+    end
+end
+
+local function getDistance(pos1, pos2)
+    local x1, y1, z1 = unpack(pos1)
+    local x2, y2, z2 = unpack(pos2)
+    return (x1 - x2) ^ 2 + (y1 - y2) ^ 2 + (z1 - z2) ^ 2
+end
+
+local function findNearbyMobs(playerPos, maxDistance, mobs)
+    local nearbyMobs = {}
+    for _, mobPos in ipairs(mobs) do
+        local distance = getDistance(playerPos, mobPos)
+        if distance <= maxDistance then
+            nearbyMobs[#nearbyMobs + 1] = mobPos
+        end
+    end
+
+    return nearbyMobs
+end
+
+local function moveToPosition(pos)
+    G.player:move(unpack(pos))
+    G.sleep(0.1)
+end
+
+local function farmMobs()
+    local playerPos = G.player:getPosition()
+    local mobPositions = G.getMobPositions()
+    local maxDistance = 10
+    local nearbyMobs = findNearbyMobs(playerPos, maxDistance, mobPositions)
+
+    if #nearbyMobs == 0 then
+        G.sleep(3)
+        return
+    end
+
+    local targetMobPos = nearbyMobs[1]
+    moveToPosition(targetMobPos)
+
+    G.player:attack(unpack(targetMobPos))
+    G.sleep(1)
+end
+
+while true do
+    farmMobs()
+    G.sleep(5)
+end
+```
